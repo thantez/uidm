@@ -12,7 +12,7 @@ with open('Online_Shopping.csv') as csvfile:
 
         if description.isupper():
             if not stock_codes.get(stock_code):
-                stock_codes[stock_code] = description
+                stock_codes[stock_code] = description.strip()
 
 with open('Online_Shopping.csv') as csvfile:
     dataset = csv.DictReader(csvfile)
@@ -29,8 +29,17 @@ with open('Online_Shopping.csv') as csvfile:
 
 with open('transactions.csv', 'w') as transactions_file:
     field_names = ['tid', 'itemset']
-    transactions_csv = csv.DictWriter(transactions_file, fieldnames=field_names, delimiter=',')
+    transactions_csv = csv.DictWriter(transactions_file, fieldnames=field_names, delimiter='|',
+                                      quotechar='"', quoting=csv.QUOTE_MINIMAL, dialect='excel')
     transactions_csv.writeheader()
 
     for tid, itemset in invoices.items():
-        transactions_csv.writerow({'tid': tid, 'itemset': list(set(itemset))})
+        unique_itemset = list(set(itemset))
+        transactions_csv.writerow({'tid': tid, 'itemset': unique_itemset})
+
+with open('transactions.result', 'w') as transactions_file:
+    for tid, itemset in invoices.items():
+        unique_itemset = list(set(itemset))
+        for item in unique_itemset:
+            transactions_file.write("%s|" % item)
+        transactions_file.write("\n")
