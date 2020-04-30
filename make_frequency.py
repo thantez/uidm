@@ -13,7 +13,7 @@ with open('transactions.result') as transactions_file:
 
 with open('frequencies.csv', 'w') as frequencies_file:
     field_names = ['item', 'frequency']
-    frequencies_csv = csv.DictWriter(frequencies_file, fieldnames=field_names)
+    frequencies_csv = csv.DictWriter(frequencies_file, fieldnames=field_names, delimiter='|')
     frequencies_csv.writeheader()
 
     for item_name, item_frequency in items.items():
