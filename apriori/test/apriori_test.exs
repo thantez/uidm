@@ -64,6 +64,25 @@ defmodule AprioriTest do
     assert expected_frequency == Apriori.make_sub_itemset(supported_frequency)
   end
 
+  test "make sub itemset test round 2" do
+    supported_frequency = [
+      {["a", "c"], 2},
+      {["b", "c"], 2},
+      {["b", "e"], 3},
+      {["c", "e"], 2}
+    ]
+
+    expected_frequency =
+      {[
+         {["b", "c", "e"], 0}
+       ],
+       [
+         {["a", "c"], 2}
+       ]}
+
+    assert expected_frequency == Apriori.make_sub_itemset(supported_frequency)
+  end
+
   test "calculate itemsets frequency" do
     itemsets =
       {[
