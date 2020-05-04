@@ -3,15 +3,6 @@ defmodule DataMiner do
   Documentation for `DataMiner`.
   """
 
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> DataMiner.hello()
-      :world
-
-  """
   def transactions_length_calculation(transactions) do
     length(transactions)
   end

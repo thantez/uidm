@@ -4,7 +4,7 @@ defmodule DataMiner.Apriori do
   """
 
   # minimum support percent
-  @min_supp 5
+  @min_supp 0.000001
   # minimum confidence percent
   @min_conf 70
 
@@ -23,19 +23,19 @@ defmodule DataMiner.Apriori do
   end
 
   def apriori({frequencies, frequents}, transactions) do
-    transactions_length_calculation(transactions)
-    |> remove_low_frequencies(frequencies)
-    |> make_sub_itemset()
-    |> calculate_itemsets_frequency(transactions)
-    |> merge_frequents(frequents)
-    |> apriori(transactions)
+    supported_itemsets =
+      transactions_length_calculation(transactions)
+      |> remove_low_frequencies(frequencies)
+
+    new_frequencies =
+      supported_itemsets
+      |> merge_itemsets()
+      |> calculate_itemsets_frequency(transactions)
+
+    apriori({new_frequencies, frequents ++ supported_itemsets}, transactions)
   end
 
-  def merge_frequents({frequencies, frequents}, pre_frequents) do
-    {frequencies, pre_frequents ++ frequents}
-  end
-
-  def calculate_itemsets_frequency({itemsets, frequents}, transactions) do
+  def calculate_itemsets_frequency(itemsets, transactions) do
     # TODO: concurency
     frequencies =
       for transaction <- transactions, {itemset, _} <- itemsets do
@@ -48,62 +48,45 @@ defmodule DataMiner.Apriori do
       |> Enum.frequencies()
       |> Map.delete(nil)
 
-    {frequencies, frequents}
+    frequencies
   end
 
-  def make_sub_itemset(frequencies) do
-    Stream.with_index(frequencies, 1)
+  def merge_itemsets(itemsets) do
+    Stream.with_index(itemsets, 1)
     |> Enum.each(fn {{itemset, _}, index} ->
-      {_, remained_frequencies} = Enum.split(frequencies, index)
+      tail_itemsets = Stream.drop(itemsets, index)
 
-      spawn_link(fn -> make_itemset_loop() end)
-      |> send({itemset, remained_frequencies, self()})
+      spawn_link(fn -> merge_itemsets_receiver() end)
+      |> send({itemset, tail_itemsets, self()})
     end)
 
-    # Enum.each(frequencies, fn {itemset, frequency} ->
-    #   frequencies_except_itemset = frequencies -- [{itemset, frequency}]
-
-    #   spawn_link(fn -> make_itemset_loop() end)
-    #   |> send({itemset, frequencies_except_itemset, self()})
-    # end)
-
-    wait_for_end([], [], length(frequencies))
+    wait_for_end([], length(itemsets))
   end
 
-  def wait_for_end(frequencies, frequents, 0), do: {frequencies, frequents}
+  def wait_for_end(merged_until_now, 0), do: merged_until_now
 
-  def wait_for_end(frequencies, frequents, counter) do
+  def wait_for_end(merged_until_now, counter) do
     receive do
-      {:end, zero_frequencies, pre_frequents} ->
-        new_frequencies = frequencies ++ zero_frequencies
-        new_frequents = pre_frequents ++ frequents
-        wait_for_end(new_frequencies, new_frequents, counter - 1)
+      {:end, merged_itemsets} ->
+        wait_for_end(merged_until_now ++ merged_itemsets, counter - 1)
     end
   end
 
-  def make_itemset_loop() do
+  def merge_itemsets_receiver() do
     receive do
-      {base_itemset, frequencies, parent_pid} ->
+      {base_itemset, itemsets, parent_pid} ->
         sub_itemsets =
-          frequencies
-          |> Stream.map(fn {itemset, frequency} ->
-            sub_itemset = make_itemset(base_itemset, itemset)
-            {sub_itemset, 0}
+          itemsets
+          |> Stream.map(fn {itemset, _} ->
+            {merger(base_itemset, itemset), 0}
           end)
           |> Enum.filter(fn {itemset, _} -> itemset != nil end)
 
-        frequent_itemset =
-          if sub_itemsets == [] do
-            [base_itemset]
-          else
-            []
-          end
-
-        send(parent_pid, {:end, sub_itemsets, frequent_itemset})
+        send(parent_pid, {:end, sub_itemsets})
     end
   end
 
-  def make_itemset(itemset_1, itemset_2) do
+  def merger(itemset_1, itemset_2) do
     {last_item_1, remained_itemset_1} = List.pop_at(itemset_1, -1)
     {last_item_2, remained_itemset_2} = List.pop_at(itemset_2, -1)
 
@@ -132,18 +115,19 @@ defmodule DataMiner.Apriori do
   def import_frequencies do
     Path.expand("../frequencies.csv")
     |> import_file()
-    |> Enum.reduce(%{}, fn [item, freq], acc -> Map.put(acc, [item], freq) end)
+    |> Enum.reduce(%{}, fn [item, freq], acc -> Map.put(acc, [item], String.to_integer(freq)) end)
   end
 
   def import_transactions do
     Path.expand("../transactions.result")
     |> import_file()
-    |> Stream.run()
+    |> Enum.to_list()
   end
 
   def import_file(file_address) do
     File.stream!(file_address)
     |> Stream.map(&String.trim/1)
     |> Stream.map(&String.split(&1, "|"))
+    |> Stream.drop(1)
   end
 end
