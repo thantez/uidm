@@ -12,6 +12,7 @@ defmodule AprioriTest do
     ["e"] => 3
   }
   @transactions_length 4
+  @min_supp 2 / 5 * 100
 
   test "check support calculation" do
     assert Apriori.support(3, 6) == 50
@@ -23,7 +24,9 @@ defmodule AprioriTest do
   end
 
   test "low frequency removes ckeck" do
-    supported_frequencies = Apriori.remove_low_frequencies(@transactions_length, @frequencies)
+    supported_frequencies =
+      Apriori.remove_low_frequencies(@transactions_length, @frequencies, @min_supp)
+
     expected_frequencies = [{["a"], 2}, {["b"], 3}, {["c"], 3}, {["e"], 3}]
     assert supported_frequencies == expected_frequencies
   end
@@ -114,6 +117,17 @@ defmodule AprioriTest do
       {["b", "c", "e"], 2}
     ]
 
-    assert Apriori.apriori({@frequencies, []}, @transactions) == expected_frequents
+    assert Apriori.apriori({@frequencies, MapSet.new()}, @transactions, @min_supp) ==
+             MapSet.new(expected_frequents)
+  end
+
+  # test "write" do
+  #   assert Apriori.apriori({@frequencies, MapSet.new()}, @transactions, @min_supp)
+  #          |> MapSet.to_list()
+  #          |> Apriori.export_frequents() == :ok
+  # end
+
+  test "test main" do
+    assert Apriori.main() == :ok
   end
 end
