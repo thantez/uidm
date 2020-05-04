@@ -11,7 +11,7 @@ defmodule DataMiner.Apriori do
     transactions = import_transactions()
     frequencies = import_frequencies()
 
-    apriori({frequencies, MapSet.new()}, transactions, @min_supp)
+    apriori({frequencies, MapSet.new()}, transactions, @min_supp, length(transactions))
     |> MapSet.to_list()
     |> export_frequents()
   end
@@ -28,18 +28,16 @@ defmodule DataMiner.Apriori do
     end)
   end
 
-  def apriori({frequencies, frequents}, _, _) when frequencies == %{} do
+  def apriori({frequencies, frequents}, _, _, _) when frequencies == %{} do
     IO.inspect("ends")
     frequents
   end
 
-  def apriori({frequencies, frequents}, transactions, min_supp) do
-    IO.inspect("hey!")
+  def apriori({frequencies, frequents}, transactions, min_supp, transactions_length) do
+    IO.inspect("apriori!")
     IO.inspect(frequencies)
 
-    supported_itemsets =
-      transactions_length_calculation(transactions)
-      |> remove_low_frequencies(frequencies, min_supp)
+    supported_itemsets = remove_low_frequencies(transactions_length, frequencies, min_supp)
 
     IO.inspect("supported")
 
@@ -51,7 +49,8 @@ defmodule DataMiner.Apriori do
     apriori(
       {new_frequencies, MapSet.union(frequents, MapSet.new(supported_itemsets))},
       transactions,
-      min_supp
+      min_supp,
+      transactions_length
     )
   end
 
@@ -146,7 +145,9 @@ defmodule DataMiner.Apriori do
   def import_frequencies do
     Path.expand("../frequencies.csv")
     |> import_file()
-    |> Enum.reduce(%{}, fn [item, freq], acc -> Map.put(acc, [item], String.to_integer(freq)) end)
+    |> Enum.reduce(%{}, fn [item, freq], acc ->
+      Map.put(acc, [item], String.to_integer(freq))
+    end)
   end
 
   def import_transactions do

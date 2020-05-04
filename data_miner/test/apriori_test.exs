@@ -117,17 +117,27 @@ defmodule AprioriTest do
       {["b", "c", "e"], 2}
     ]
 
-    assert Apriori.apriori({@frequencies, MapSet.new()}, @transactions, @min_supp) ==
+    assert Apriori.apriori(
+             {@frequencies, MapSet.new()},
+             @transactions,
+             @min_supp,
+             length(@transactions)
+           ) ==
              MapSet.new(expected_frequents)
   end
 
-  # test "write" do
-  #   assert Apriori.apriori({@frequencies, MapSet.new()}, @transactions, @min_supp)
-  #          |> MapSet.to_list()
-  #          |> Apriori.export_frequents() == :ok
-  # end
-
-  test "test main" do
-    assert Apriori.main() == :ok
+  test "write" do
+    assert Apriori.apriori(
+             {@frequencies, MapSet.new()},
+             @transactions,
+             @min_supp,
+             length(@transactions)
+           )
+           |> MapSet.to_list()
+           |> Apriori.export_frequents() == :ok
   end
+
+  # test "test main" do
+  #   assert Apriori.main() == :ok
+  # end
 end
