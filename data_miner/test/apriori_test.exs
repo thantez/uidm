@@ -4,6 +4,7 @@ defmodule AprioriTest do
   alias DataMiner.Apriori
 
   @transactions [["a", "c", "d"], ["b", "c", "e"], ["a", "b", "c", "e"], ["b", "e"]]
+                |> Enum.map(&MapSet.new(&1))
   @frequencies %{
     ["a"] => 2,
     ["b"] => 3,
@@ -43,7 +44,7 @@ defmodule AprioriTest do
 
   test "make itemset from a base itemset: wrong data" do
     result = Apriori.merger(["a", "d", "c"], ["a", "b", "d"])
-    expected_itemset = nil
+    expected_itemset = []
     assert result == expected_itemset
   end
 
@@ -57,12 +58,12 @@ defmodule AprioriTest do
 
     expected_frequency =
       MapSet.new([
-        {["a", "b"], 0},
-        {["a", "c"], 0},
-        {["a", "e"], 0},
-        {["b", "c"], 0},
-        {["b", "e"], 0},
-        {["c", "e"], 0}
+        MapSet.new(["a", "b"]),
+        MapSet.new(["a", "c"]),
+        MapSet.new(["a", "e"]),
+        MapSet.new(["b", "c"]),
+        MapSet.new(["b", "e"]),
+        MapSet.new(["c", "e"])
       ])
 
     assert expected_frequency == MapSet.new(Apriori.merge_itemsets(supported_frequency))
@@ -77,7 +78,7 @@ defmodule AprioriTest do
     ]
 
     expected_frequency = [
-      {["b", "c", "e"], 0}
+      MapSet.new(["b", "c", "e"])
     ]
 
     assert expected_frequency == Apriori.merge_itemsets(supported_frequency)
@@ -85,12 +86,12 @@ defmodule AprioriTest do
 
   test "calculate itemsets frequency" do
     itemsets = [
-      {["a", "b"], 0},
-      {["a", "c"], 0},
-      {["a", "e"], 0},
-      {["b", "c"], 0},
-      {["b", "e"], 0},
-      {["c", "e"], 0}
+      MapSet.new(["a", "b"]),
+      MapSet.new(["a", "c"]),
+      MapSet.new(["a", "e"]),
+      MapSet.new(["b", "c"]),
+      MapSet.new(["b", "e"]),
+      MapSet.new(["c", "e"])
     ]
 
     expected_result =

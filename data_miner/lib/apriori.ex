@@ -3,7 +3,7 @@ defmodule DataMiner.Apriori do
   Documentation for `Apriori`.
   """
 
-  @min_supp 5
+  @min_supp 2
   @doc """
   Main function for apriori algorithm.
   """
@@ -53,21 +53,20 @@ defmodule DataMiner.Apriori do
   end
 
   def calculate_itemsets_frequency(itemsets, transactions) do
+    IO.inspect("calculating #{length(itemsets)}")
+
     itemsets
-    |> IO.inspect()
     |> Task.async_stream(
-      fn {itemset, _} ->
+      fn itemset ->
         frequency =
           transactions
-          |> Enum.reduce(0, fn transaction, acc ->
-            if itemset -- transaction == [] do
-              acc + 1
-            else
-              acc
-            end
+          |> Task.async_stream(fn transaction ->
+            MapSet.subset?(itemset, transaction)
           end)
+          |> Stream.filter(fn {:ok, result} -> result end)
+          |> Enum.count()
 
-        {itemset, frequency}
+        {MapSet.to_list(itemset), frequency}
       end,
       ordered: false
     )
