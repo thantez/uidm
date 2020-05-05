@@ -55,16 +55,17 @@ defmodule AprioriTest do
       {["e"], 3}
     ]
 
-    expected_frequency = [
-      {["a", "b"], 0},
-      {["a", "c"], 0},
-      {["a", "e"], 0},
-      {["b", "c"], 0},
-      {["b", "e"], 0},
-      {["c", "e"], 0}
-    ]
+    expected_frequency =
+      MapSet.new([
+        {["a", "b"], 0},
+        {["a", "c"], 0},
+        {["a", "e"], 0},
+        {["b", "c"], 0},
+        {["b", "e"], 0},
+        {["c", "e"], 0}
+      ])
 
-    assert expected_frequency == Apriori.merge_itemsets(supported_frequency)
+    assert expected_frequency == MapSet.new(Apriori.merge_itemsets(supported_frequency))
   end
 
   test "merge itemsets test round 2" do
@@ -92,48 +93,56 @@ defmodule AprioriTest do
       {["c", "e"], 0}
     ]
 
-    expected_result = %{
-      ["a", "b"] => 1,
-      ["a", "c"] => 2,
-      ["a", "e"] => 1,
-      ["b", "c"] => 2,
-      ["b", "e"] => 3,
-      ["c", "e"] => 2
-    }
+    expected_result =
+      MapSet.new([
+        {["a", "b"], 1},
+        {["a", "c"], 2},
+        {["a", "e"], 1},
+        {["b", "c"], 2},
+        {["b", "e"], 3},
+        {["c", "e"], 2}
+      ])
 
-    assert expected_result === Apriori.calculate_itemsets_frequency(itemsets, @transactions)
+    assert expected_result ===
+             MapSet.new(Apriori.calculate_itemsets_frequency(itemsets, @transactions))
   end
 
   test "apriori algorithm" do
-    expected_frequents = [
-      {["a"], 2},
-      {["b"], 3},
-      {["c"], 3},
-      {["e"], 3},
-      {["a", "c"], 2},
-      {["b", "c"], 2},
-      {["b", "e"], 3},
-      {["c", "e"], 2},
-      {["b", "c", "e"], 2}
-    ]
+    expected_frequents =
+      MapSet.new([
+        {["a"], 2},
+        {["b"], 3},
+        {["c"], 3},
+        {["e"], 3},
+        {["a", "c"], 2},
+        {["b", "c"], 2},
+        {["b", "e"], 3},
+        {["c", "e"], 2},
+        {["b", "c", "e"], 2}
+      ])
 
-    assert Apriori.apriori(
-             {@frequencies, MapSet.new()},
-             @transactions,
-             @min_supp,
-             length(@transactions)
+    assert MapSet.new(
+             Apriori.apriori(
+               @frequencies,
+               [],
+               @transactions,
+               @min_supp,
+               length(@transactions)
+             )
+             |> List.flatten()
            ) ==
-             MapSet.new(expected_frequents)
+             expected_frequents
   end
 
   test "write" do
     assert Apriori.apriori(
-             {@frequencies, MapSet.new()},
+             @frequencies,
+             [],
              @transactions,
              @min_supp,
              length(@transactions)
            )
-           |> MapSet.to_list()
+           |> List.flatten()
            |> Apriori.export_frequents() == :ok
   end
 

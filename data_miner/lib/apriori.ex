@@ -3,7 +3,7 @@ defmodule DataMiner.Apriori do
   Documentation for `Apriori`.
   """
 
-  @min_supp 0.1
+  @min_supp 5
   @doc """
   Main function for apriori algorithm.
   """
@@ -11,8 +11,8 @@ defmodule DataMiner.Apriori do
     transactions = import_transactions()
     frequencies = import_frequencies()
 
-    apriori({frequencies, MapSet.new()}, transactions, @min_supp, length(transactions))
-    |> MapSet.to_list()
+    apriori(frequencies, [], transactions, @min_supp, length(transactions))
+    |> List.flatten()
     |> export_frequents()
   end
 
@@ -28,18 +28,15 @@ defmodule DataMiner.Apriori do
     end)
   end
 
-  def apriori({frequencies, frequents}, _, _, _) when frequencies == %{} do
+  def apriori([], frequents, _, _, _) do
     IO.inspect("ends")
     frequents
   end
 
-  def apriori({frequencies, frequents}, transactions, min_supp, transactions_length) do
+  def apriori(frequencies, frequents, transactions, min_supp, transactions_length) do
     IO.inspect("apriori!")
-    IO.inspect(frequencies)
 
     supported_itemsets = remove_low_frequencies(transactions_length, frequencies, min_supp)
-
-    IO.inspect("supported")
 
     new_frequencies =
       supported_itemsets
@@ -47,7 +44,8 @@ defmodule DataMiner.Apriori do
       |> calculate_itemsets_frequency(transactions)
 
     apriori(
-      {new_frequencies, MapSet.union(frequents, MapSet.new(supported_itemsets))},
+      new_frequencies,
+      [supported_itemsets | frequents],
       transactions,
       min_supp,
       transactions_length
@@ -55,65 +53,40 @@ defmodule DataMiner.Apriori do
   end
 
   def calculate_itemsets_frequency(itemsets, transactions) do
-    IO.inspect("calculating")
+    itemsets
+    |> IO.inspect()
+    |> Task.async_stream(
+      fn {itemset, _} ->
+        frequency =
+          transactions
+          |> Enum.reduce(0, fn transaction, acc ->
+            if itemset -- transaction == [] do
+              acc + 1
+            else
+              acc
+            end
+          end)
 
-    for transaction <- transactions do
-      spawn_link(fn -> calculate_loop() end)
-      |> send({transaction, itemsets, self()})
-    end
-
-    wait_for_end([], length(transactions))
-    |> Enum.frequencies()
-    |> Map.delete(nil)
-  end
-
-  def calculate_loop() do
-    receive do
-      {transaction, itemsets, parent_pid} ->
-        diffed =
-          itemsets
-          |> Stream.map(fn {itemset, _} -> if itemset -- transaction == [], do: itemset end)
-          |> Enum.filter(fn row -> row != nil end)
-
-        send(parent_pid, {diffed})
-    end
+        {itemset, frequency}
+      end,
+      ordered: false
+    )
+    |> Enum.reduce([], fn {:ok, merged}, merged_list -> [merged | merged_list] end)
   end
 
   def merge_itemsets(itemsets) do
     IO.inspect("merging")
 
     Stream.with_index(itemsets, 1)
-    |> Enum.each(fn {{itemset, _}, index} ->
-      tail_itemsets = Stream.drop(itemsets, index)
-
-      spawn_link(fn -> merge_itemsets_receiver() end)
-      |> send({itemset, tail_itemsets, self()})
+    |> Task.async_stream(fn {{base_itemset, _}, index} ->
+      Stream.drop(itemsets, index)
+      |> Stream.map(fn {itemset, _} ->
+        MapSet.new(merger(base_itemset, itemset))
+      end)
+      |> Enum.filter(fn itemset -> itemset != MapSet.new() end)
     end)
-
-    wait_for_end([], length(itemsets))
-  end
-
-  def wait_for_end(list, 0), do: list
-
-  def wait_for_end(list, counter) do
-    receive do
-      {item} ->
-        wait_for_end(list ++ item, counter - 1)
-    end
-  end
-
-  def merge_itemsets_receiver() do
-    receive do
-      {base_itemset, itemsets, parent_pid} ->
-        sub_itemsets =
-          itemsets
-          |> Stream.map(fn {itemset, _} ->
-            {merger(base_itemset, itemset), 0}
-          end)
-          |> Enum.filter(fn {itemset, _} -> itemset != nil end)
-
-        send(parent_pid, {sub_itemsets})
-    end
+    |> Enum.reduce([], fn {:ok, merged}, merged_list -> [merged | merged_list] end)
+    |> List.flatten()
   end
 
   def merger(itemset_1, itemset_2) do
@@ -123,7 +96,7 @@ defmodule DataMiner.Apriori do
     if remained_itemset_1 == remained_itemset_2 do
       remained_itemset_1 ++ [last_item_1, last_item_2]
     else
-      nil
+      []
     end
   end
 
@@ -153,7 +126,7 @@ defmodule DataMiner.Apriori do
   def import_transactions do
     Path.expand("../transactions.result")
     |> import_file()
-    |> Enum.to_list()
+    |> Enum.map(fn transaction -> MapSet.new(transaction) end)
   end
 
   def import_file(file_address) do
