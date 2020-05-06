@@ -1,0 +1,7 @@
+%{
+  "cpu_info": {:hex, :cpu_info, "0.2.1", "4a167c8880eac7cd8020fb9f34aaf1dbf17dd2a93a93b9f773d54cbbf14f402f", [:mix], [], "hexpm"},
+  "flow": {:hex, :flow, "1.0.0", "3df0b6687ba01dae248c615d50e1f8b36631e3eb9b9a663adf38262035d9fc08", [:mix], [{:gen_stage, "~> 1.0", [hex: :gen_stage, repo: "hexpm", optional: false]}], "hexpm"},
+  "gen_stage": {:hex, :gen_stage, "1.0.0", "51c8ae56ff54f9a2a604ca583798c210ad245f415115453b773b621c49776df5", [:mix], [], "hexpm"},
+  "pelemay": {:hex, :pelemay, "0.0.10", "f34f2f90b33fd2cbc1d8ef300af77be25afffb0b918a144c3bc2beda0091375e", [:mix], [{:cpu_info, "~> 0.2.1", [hex: :cpu_info, repo: "hexpm", optional: false]}, {:ring_logger, "~> 0.6", [hex: :ring_logger, repo: "hexpm", optional: false]}], "hexpm"},
+  "ring_logger": {:hex, :ring_logger, "0.8.0", "b1baddc269099b2afe2ea3a87b8e2b71e57331c0000038ae55090068aac679db", [:mix], [], "hexpm"},
+}
