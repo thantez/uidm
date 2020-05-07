@@ -1,0 +1,15 @@
+body {
+    font-family: sans-serif;
+    text-align: center;
+}
+
+.chartWrapper {
+    position: relative;
+    overflow: auto;
+    width: 100%;
+}
+
+.chartContainer {
+    position: relative;
+    height: 800px;
+}

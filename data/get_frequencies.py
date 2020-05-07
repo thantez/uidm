@@ -1,3 +1,5 @@
+import json
+
 items_count = {}
 
 with open('transactions_items.txt') as file:
@@ -10,3 +12,6 @@ with open('transactions_items.txt') as file:
 with open('items_frequencies.txt', 'w') as file:
     for key, count in items_count.items():
         file.write(f'{key}|{count}\n')
+
+with open('items_frequency_chart/data.json', 'w') as file:
+    json.dump(items_count, file)
