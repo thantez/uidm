@@ -1,91 +1,100 @@
 defmodule DataMiner.Eclat do
-  alias DataMiner.Node
-
-  @min_supp 5
+  @min_supp 2
   @transactions_file Path.expand("../transactions.result")
 
-  def main do
-    transactions =
-      import_transactions()
-      |> Enum.map(fn a -> a end)
+  # def export_frequents(frequents) do
+  #   {:ok, file} = File.open(Path.expand("../frequents.result"), [:write])
 
-    nodes =
+  #   Enum.each(frequents, fn {itemset, frequency} ->
+  #     Enum.each(itemset, fn item ->
+  #       IO.write(file, "#{item} | ")
+  #     end)
+
+  #     IO.write(file, "#{frequency}\n")
+  #   end)
+  # end
+
+  # ----------------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------------
+
+  def main do
+    transactions = import_transactions()
+
+    itemsets =
       transactions
       |> Stream.with_index()
       |> transactios_to_eclat_form()
-      |> make_family()
 
-    IO.inspect(length(nodes))
+    # |> IO.inspect(label: "Eclat formation has been done.")
 
-    eclat(nodes, length(transactions), 1)
-    |> IO.inspect()
+    start = Time.utc_now()
+
+    result =
+      eclat(itemsets, [], @min_supp, length(transactions))
+      |> List.flatten()
+      |> Enum.map(fn {itemset, transaction} -> "#{itemset} | #{MapSet.size(transaction)}" end)
+
+    endt = Time.utc_now()
+    IO.inspect("total time: #{Time.diff(endt, start)}s")
+
+    result
   end
 
-  def eclat(nodes, transactions_length, depth) do
-    nodes
-    |> Enum.filter(fn %{itemset: itemset} -> length(itemset) == depth end)
-    |> DataMiner.remove_low_frequencies(transactions_length, @min_supp)
-    |> make_sub_itemset()
+  def eclat([], frequents, _, _) do
+    IO.inspect("ends")
+    frequents
   end
 
-  def make_sub_itemset(nodes) do
-    Stream.with_index(nodes, 1)
-    |> Enum.each(fn {node, index} ->
-      {_, next_nodes} = Enum.split(nodes, index)
+  def eclat(itemsets, frequents, min_supp, transactions_length) do
+    IO.inspect("eclat!")
 
-      spawn_link(fn -> make_itemset_loop() end)
-      |> send({node, next_nodes, self()})
-    end)
+    supported_itemsets = remove_low_frequencies(itemsets, min_supp, transactions_length)
 
-    wait_for_end([], length(nodes))
+    supported_itemsets
+    |> merge_itemsets([])
+    |> eclat([supported_itemsets | frequents], min_supp, transactions_length)
   end
 
-  def wait_for_end(nodes, 0), do: nodes
+  def merge_itemsets([], merged_itemsets), do: merged_itemsets |> List.flatten()
 
-  def wait_for_end(nodes, counter) do
-    receive do
-      {:end, zero_nodes} ->
-        new_nodes = nodes ++ zero_nodes
-        wait_for_end(new_nodes, counter - 1)
-    end
+  def merge_itemsets([base_itemset | tail], merged_list) do
+    merged =
+      tail
+      |> Flow.from_enumerable()
+      |> Flow.map(fn itemset ->
+        merger(base_itemset, itemset)
+      end)
+      |> Flow.filter(fn itemset -> itemset != nil end)
+      |> Enum.to_list()
+
+    merge_itemsets(tail, [merged | merged_list])
   end
 
-  def make_itemset_loop() do
-    receive do
-      {base_node, nodes, parent_pid} ->
-        sub_itemsets =
-          nodes
-          |> Stream.map(fn node -> make_itemset(base_node, node) end)
-          |> Enum.filter(fn
-            nil -> false
-            _ -> true
-          end)
-
-        send(parent_pid, {:end, sub_itemsets})
-    end
-  end
-
-  def make_itemset(
-        %Node{itemset: itemset_1, value: value_1} = node_1,
-        %Node{itemset: itemset_2, value: value_2} = node_2
+  def merger(
+        {[base_item | tail_base_itemset], base_transactions},
+        {[item | tail_itemset], transactions}
       ) do
-    {last_item_1, remained_itemset_1} = List.pop_at(itemset_1, -1)
-    {last_item_2, remained_itemset_2} = List.pop_at(itemset_2, -1)
+    # IO.inspect("merge for #{base_item} && #{item}")
 
-    if remained_itemset_1 == remained_itemset_2 do
-      itemset = remained_itemset_1 ++ [last_item_1, last_item_2]
-      value = MapSet.intersection(value_1, value_2)
-      Node.birth(node_1, node_2, itemset, value)
+    if tail_base_itemset == tail_itemset do
+      {[item | [base_item | tail_base_itemset]],
+       MapSet.intersection(base_transactions, transactions)}
     else
       nil
     end
   end
 
-  def make_family(transactions) do
-    transactions
-    |> Enum.map(fn {itemset, value} ->
-      %Node{itemset: itemset, value: value, frequency: MapSet.size(value)}
+  def remove_low_frequencies(itemsets, min_supp, transactions_length) do
+    itemsets
+    |> Flow.from_enumerable()
+    |> Flow.filter(fn {_item, transactions} ->
+      support(MapSet.size(transactions), transactions_length) >= min_supp
     end)
+    |> Enum.to_list()
+  end
+
+  def support(item_frequency, transactions_length) do
+    item_frequency / transactions_length * 100
   end
 
   def transactios_to_eclat_form(transactions) do
@@ -107,14 +116,15 @@ defmodule DataMiner.Eclat do
   end
 
   def import_transactions do
-    main_transactions =
-      Path.expand(@transactions_file)
-      |> import_file()
+    Path.expand(@transactions_file)
+    |> import_file()
+    |> Enum.to_list()
   end
 
   def import_file(file_address) do
     File.stream!(file_address)
     |> Stream.map(&String.trim/1)
     |> Stream.map(&String.split(&1, "|"))
+    |> Stream.drop(1)
   end
 end
