@@ -3,7 +3,7 @@ defmodule DataMiner.Apriori do
   Documentation for `Apriori`.
   """
 
-  @min_supp 0.1
+  @min_supp 1
   @doc """
   Main function for apriori algorithm.
   """
@@ -11,9 +11,14 @@ defmodule DataMiner.Apriori do
     transactions = import_transactions()
     frequencies = import_frequencies()
 
+    start = Time.utc_now()
+
     apriori(frequencies, [], transactions, @min_supp, length(transactions))
     |> List.flatten()
     |> export_frequents()
+
+    endt = Time.utc_now()
+    IO.inspect("total time: #{Time.diff(endt, start)}s")
   end
 
   def export_frequents(frequents) do
@@ -40,7 +45,7 @@ defmodule DataMiner.Apriori do
 
     new_frequencies =
       supported_itemsets
-      |> merge_itemsets()
+      |> merge_itemsets([])
       |> calculate_itemsets_frequency(transactions)
 
     apriori(
@@ -75,34 +80,29 @@ defmodule DataMiner.Apriori do
       end)
       |> Enum.to_list()
 
-    # |> Enum.reduce([], fn {:ok, merged}, merged_list -> [merged | merged_list] end)
-
     endt = Time.utc_now()
-    IO.inspect("time: #{Time.diff(endt, start)}")
+    IO.inspect("time of frequency calculating: #{Time.diff(endt, start)}s")
     result
   end
 
-  def merge_itemsets(itemsets) do
-    IO.inspect("merging")
+  def merge_itemsets([], merged_itemsets), do: merged_itemsets |> List.flatten()
 
-    Stream.with_index(itemsets, 1)
-    |> Task.async_stream(fn {{base_itemset, _}, index} ->
-      Stream.drop(itemsets, index)
-      |> Stream.map(fn {itemset, _} ->
+  def merge_itemsets([{base_itemset, _} | tail], merged_list) do
+    merged =
+      tail
+      |> Flow.from_enumerable()
+      |> Flow.map(fn {itemset, _} ->
         MapSet.new(merger(base_itemset, itemset))
       end)
-      |> Enum.filter(fn itemset -> itemset != MapSet.new() end)
-    end)
-    |> Enum.reduce([], fn {:ok, merged}, merged_list -> [merged | merged_list] end)
-    |> List.flatten()
+      |> Flow.filter(fn itemset -> itemset != MapSet.new() end)
+      |> Enum.to_list()
+
+    merge_itemsets(tail, [merged | merged_list])
   end
 
-  def merger(itemset_1, itemset_2) do
-    {last_item_1, remained_itemset_1} = List.pop_at(itemset_1, -1)
-    {last_item_2, remained_itemset_2} = List.pop_at(itemset_2, -1)
-
-    if remained_itemset_1 == remained_itemset_2 do
-      remained_itemset_1 ++ [last_item_1, last_item_2]
+  def merger([base_item | tail_base_itemset], [item | tail_itemset]) do
+    if tail_base_itemset == tail_itemset do
+      [item | [base_item | tail_base_itemset]]
     else
       []
     end

@@ -33,12 +33,12 @@ defmodule AprioriTest do
   end
 
   test "make itemset from a base itemset: correct data" do
-    result = Apriori.merger(["a", "b", "c"], ["a", "b", "d"])
-    expected_itemset = ["a", "b", "c", "d"]
+    result = Apriori.merger(["c", "b", "a"], ["d", "b", "a"])
+    expected_itemset = ["d", "c", "b", "a"]
     assert result == expected_itemset
 
     result2 = Apriori.merger(["a"], ["b"])
-    expected_itemset2 = ["a", "b"]
+    expected_itemset2 = ["b", "a"]
     assert result2 == expected_itemset2
   end
 
@@ -66,22 +66,22 @@ defmodule AprioriTest do
         MapSet.new(["c", "e"])
       ])
 
-    assert expected_frequency == MapSet.new(Apriori.merge_itemsets(supported_frequency))
+    assert expected_frequency == MapSet.new(Apriori.merge_itemsets(supported_frequency, []))
   end
 
   test "merge itemsets test round 2" do
     supported_frequency = [
-      {["a", "c"], 2},
-      {["b", "c"], 2},
-      {["b", "e"], 3},
-      {["c", "e"], 2}
+      {["c", "a"], 2},
+      {["c", "b"], 2},
+      {["e", "b"], 3},
+      {["e", "c"], 2}
     ]
 
     expected_frequency = [
-      MapSet.new(["b", "c", "e"])
+      MapSet.new(["e", "c", "b"])
     ]
 
-    assert expected_frequency == Apriori.merge_itemsets(supported_frequency)
+    assert expected_frequency == Apriori.merge_itemsets(supported_frequency, [])
   end
 
   test "calculate itemsets frequency" do
