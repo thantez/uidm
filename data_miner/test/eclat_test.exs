@@ -1,7 +1,7 @@
-defmodule AprioriTest do
+defmodule EclatTest do
   use ExUnit.Case
-  doctest DataMiner.Apriori
-  alias DataMiner.Apriori
+  doctest DataMiner.Eclat
+  alias DataMiner.Eclat
 
   @transactions [["a", "c", "d"], ["b", "c", "e"], ["a", "b", "c", "e"], ["b", "e"]]
                 |> Enum.map(&MapSet.new(&1))

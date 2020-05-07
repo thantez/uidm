@@ -3,7 +3,7 @@ defmodule DataMiner.Apriori do
   Documentation for `Apriori`.
   """
 
-  @min_supp 1
+  @min_supp 2
   @doc """
   Main function for apriori algorithm.
   """
@@ -65,6 +65,7 @@ defmodule DataMiner.Apriori do
     result =
       itemsets
       |> Flow.from_enumerable()
+      |> Flow.partition()
       |> Flow.map(fn itemset ->
         frequency =
           transactions
@@ -91,6 +92,7 @@ defmodule DataMiner.Apriori do
     merged =
       tail
       |> Flow.from_enumerable()
+      |> Flow.partition()
       |> Flow.map(fn {itemset, _} ->
         MapSet.new(merger(base_itemset, itemset))
       end)
@@ -140,7 +142,7 @@ defmodule DataMiner.Apriori do
   def import_file(file_address) do
     File.stream!(file_address)
     |> Stream.map(&String.trim/1)
-    |> Stream.map(&String.split(&1, "|"))
+    |> Stream.map(fn line -> String.split(line, "|") |> Enum.filter(fn word -> word != "" end) end)
     |> Stream.drop(1)
   end
 end
