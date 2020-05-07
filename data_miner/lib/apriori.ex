@@ -2,6 +2,9 @@ defmodule DataMiner.Apriori do
   @moduledoc """
   Documentation for `Apriori`.
   """
+  @transactions_file Path.expand("../data/transactions_items.txt")
+  @frequencies_file Path.expand("../data/items_frequencies.txt")
+  @result_save_file Path.expand("../results/apriori_frequents.txt")
 
   @min_supp 2
   @doc """
@@ -22,7 +25,7 @@ defmodule DataMiner.Apriori do
   end
 
   def export_frequents(frequents) do
-    {:ok, file} = File.open(Path.expand("../results/apriori_frequents.txt"), [:write])
+    {:ok, file} = File.open(@result_save_file, [:write])
 
     Enum.each(frequents, fn {itemset, frequency} ->
       Enum.each(itemset, fn item ->
@@ -126,7 +129,7 @@ defmodule DataMiner.Apriori do
   end
 
   def import_frequencies do
-    Path.expand("../data/items_frequencies.txt")
+    @frequencies_file
     |> import_file()
     |> Enum.reduce(%{}, fn [item, freq], acc ->
       Map.put(acc, [item], String.to_integer(freq))
@@ -134,7 +137,7 @@ defmodule DataMiner.Apriori do
   end
 
   def import_transactions do
-    Path.expand("../data/transactions_items.txt")
+    @transactions_file
     |> import_file()
     |> Enum.map(fn transaction -> MapSet.new(transaction) end)
   end

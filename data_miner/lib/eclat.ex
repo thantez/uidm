@@ -1,21 +1,9 @@
 defmodule DataMiner.Eclat do
-  @min_supp 0.1
+
   @transactions_file Path.expand("../data/transactions_items.txt")
+  @result_save_file Path.expand("../results/eclat_frequents.txt")
 
-  # def export_frequents(frequents) do
-  #   {:ok, file} = File.open(Path.expand("../frequents.result"), [:write])
-
-  #   Enum.each(frequents, fn {itemset, frequency} ->
-  #     Enum.each(itemset, fn item ->
-  #       IO.write(file, "#{item} | ")
-  #     end)
-
-  #     IO.write(file, "#{frequency}\n")
-  #   end)
-  # end
-
-  # ----------------------------------------------------------------------------------
-  # ----------------------------------------------------------------------------------
+  @min_supp 2
 
   def main do
     transactions = import_transactions()
@@ -25,19 +13,30 @@ defmodule DataMiner.Eclat do
       |> Stream.with_index()
       |> transactios_to_eclat_form()
 
-    # |> IO.inspect(label: "Eclat formation has been done.")
-
     start = Time.utc_now()
 
     result =
       eclat(itemsets, [], @min_supp, length(transactions))
       |> List.flatten()
-      |> Enum.map(fn {itemset, transaction} -> "#{itemset} | #{MapSet.size(transaction)}" end)
+      |> export_frequents()
 
     endt = Time.utc_now()
     IO.inspect("total time: #{Time.diff(endt, start)}s")
 
     result
+  end
+
+  def export_frequents(frequents) do
+    {:ok, file} = File.open(@result_save_file, [:write])
+
+    Enum.each(frequents, fn {itemset, transactions} ->
+      itemset
+      |> Enum.each(fn item ->
+        IO.write(file, "#{item} | ")
+      end)
+
+      IO.write(file, "#{MapSet.size(transactions)}\n")
+    end)
   end
 
   def eclat([], frequents, _, _) do
@@ -49,19 +48,19 @@ defmodule DataMiner.Eclat do
     IO.inspect("eclat!")
 
     supported_itemsets = remove_low_frequencies(itemsets, min_supp, transactions_length)
+    IO.inspect("supported")
 
     supported_itemsets
-    |> merge_itemsets([])
+    |> merge_itemsets()
     |> eclat([supported_itemsets | frequents], min_supp, transactions_length)
   end
 
-  def merge_itemsets(itemsets, _merged_list) do
+  def merge_itemsets(itemsets) do
     itemsets
     |> Stream.with_index(1)
     |> Flow.from_enumerable()
-    |> Flow.map(fn {{[base_item | tail_base_itemset], base_transactions}, index} ->
-      # {a, b} = base_itemset
-      # IO.inspect(a, label: "with size #{MapSet.size(b)} index #{index}")
+    |> Flow.partition()
+    |> Flow.flat_map(fn {{[base_item | tail_base_itemset], base_transactions}, index} ->
       itemsets
       |> Stream.drop(index)
       |> Stream.filter(fn {[_ | tail_itemset], _} -> tail_itemset == tail_base_itemset end)
@@ -71,19 +70,10 @@ defmodule DataMiner.Eclat do
       end)
     end)
     |> Enum.to_list()
-    |> List.flatten()
   end
 
-  def merger(
-        {[base_item | tail_base_itemset], base_transactions},
-        {[item | tail_itemset], transactions}
-      ) do
-    if tail_base_itemset == tail_itemset do
-      {[item | [base_item | tail_base_itemset]],
-       MapSet.intersection(base_transactions, transactions)}
-    else
-      nil
-    end
+  def merger({base_item, base_transactions}, {item, transactions}, group_tail) do
+    {[item | [base_item | group_tail]], MapSet.intersection(base_transactions, transactions)}
   end
 
   def remove_low_frequencies(itemsets, min_supp, transactions_length) do
@@ -100,7 +90,7 @@ defmodule DataMiner.Eclat do
   def transactios_to_eclat_form(transactions) do
     Enum.reduce(transactions, %{}, fn {transaction, index}, items ->
       Enum.frequencies(transaction)
-      |> Map.new(fn {item, _} -> {[String.to_atom(item)], MapSet.new([index])} end)
+      |> Map.new(fn {item, _} -> {[item], MapSet.new([index])} end)
       |> Map.merge(items, fn _k, v1, v2 -> MapSet.union(v1, v2) end)
     end)
   end
