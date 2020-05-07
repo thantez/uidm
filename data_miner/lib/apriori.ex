@@ -6,7 +6,7 @@ defmodule DataMiner.Apriori do
   @frequencies_file Path.expand("../data/items_frequencies.txt")
   @result_save_file Path.expand("../results/apriori_frequents.txt")
 
-  @min_supp 2
+  @min_supp 0.001
   @doc """
   Main function for apriori algorithm.
   """

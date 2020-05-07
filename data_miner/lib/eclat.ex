@@ -3,7 +3,7 @@ defmodule DataMiner.Eclat do
   @transactions_file Path.expand("../data/transactions_items.txt")
   @result_save_file Path.expand("../results/eclat_frequents.txt")
 
-  @min_supp 2
+  @min_supp 0.001
 
   def main do
     transactions = import_transactions()
