@@ -1,6 +1,6 @@
 defmodule DataMiner.Eclat do
   @min_supp 0.1
-  @transactions_file Path.expand("../transactions.result")
+  @transactions_file Path.expand("../data/transactions_items.txt")
 
   # def export_frequents(frequents) do
   #   {:ok, file} = File.open(Path.expand("../frequents.result"), [:write])
