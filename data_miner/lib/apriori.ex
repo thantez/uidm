@@ -2,6 +2,8 @@ defmodule DataMiner.Apriori do
   @moduledoc """
   Documentation for `Apriori`.
   """
+  require Logger
+
   @transactions_file Path.expand("../data/transactions_items.txt")
   @frequencies_file Path.expand("../data/items_frequencies.txt")
   @result_save_file Path.expand("../results/apriori_frequents.txt")
@@ -92,6 +94,8 @@ defmodule DataMiner.Apriori do
   def merge_itemsets([], merged_itemsets), do: merged_itemsets |> List.flatten()
 
   def merge_itemsets([{base_itemset, _} | tail], merged_list) do
+    Logger.debug("merge itemsets #{inspect(base_itemset)}")
+
     merged =
       tail
       |> Flow.from_enumerable()
@@ -118,6 +122,8 @@ defmodule DataMiner.Apriori do
   end
 
   def remove_low_frequencies(transactions_length, frequencies, min_supp) do
+    Logger.debug("remove low itemsets")
+
     frequencies
     |> Enum.filter(fn {_item, frequency} ->
       support(frequency, transactions_length) >= min_supp
@@ -132,7 +138,7 @@ defmodule DataMiner.Apriori do
     @frequencies_file
     |> import_file()
     |> Enum.reduce(%{}, fn [item, freq], acc ->
-      Map.put(acc, [item], String.to_integer(freq))
+      Map.put(acc, [String.to_atom(item)], String.to_integer(freq))
     end)
   end
 
@@ -145,7 +151,11 @@ defmodule DataMiner.Apriori do
   def import_file(file_address) do
     File.stream!(file_address)
     |> Stream.map(&String.trim/1)
-    |> Stream.map(fn line -> String.split(line, "|") |> Enum.filter(fn word -> word != "" end) end)
+    |> Stream.map(fn line ->
+      String.split(line, "|")
+      |> Enum.filter(fn word -> word != "" end)
+      |> Enum.map(fn item -> String.to_atom(item) end)
+    end)
     |> Stream.drop(1)
   end
 end

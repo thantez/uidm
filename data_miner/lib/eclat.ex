@@ -1,5 +1,4 @@
 defmodule DataMiner.Eclat do
-
   @transactions_file Path.expand("../data/transactions_items.txt")
   @result_save_file Path.expand("../results/eclat_frequents.txt")
 
@@ -10,10 +9,11 @@ defmodule DataMiner.Eclat do
 
     itemsets =
       transactions
-      |> Stream.with_index()
       |> transactios_to_eclat_form()
 
     start = Time.utc_now()
+
+    table = :ets.new(:table, [:set, :public])
 
     result =
       eclat(itemsets, [], @min_supp, length(transactions))
@@ -58,16 +58,15 @@ defmodule DataMiner.Eclat do
   def merge_itemsets(itemsets) do
     itemsets
     |> Stream.with_index(1)
-    |> Flow.from_enumerable()
-    |> Flow.partition()
-    |> Flow.flat_map(fn {{[base_item | tail_base_itemset], base_transactions}, index} ->
+    |> Stream.flat_map(fn {{[base_item | tail_base_itemset], base_transactions}, index} ->
       itemsets
       |> Stream.drop(index)
       |> Stream.filter(fn {[_ | tail_itemset], _} -> tail_itemset == tail_base_itemset end)
-      |> Enum.map(fn {[item | _], transactions} ->
+      |> Stream.map(fn {[item | _], transactions} ->
         {[item | [base_item | tail_base_itemset]],
          MapSet.intersection(base_transactions, transactions)}
       end)
+      |> Enum.to_list()
     end)
     |> Enum.to_list()
   end
@@ -88,10 +87,15 @@ defmodule DataMiner.Eclat do
   end
 
   def transactios_to_eclat_form(transactions) do
-    Enum.reduce(transactions, %{}, fn {transaction, index}, items ->
+    transactions
+    |> Stream.with_index()
+    |> Enum.reduce(%{}, fn {transaction, index}, items ->
       Enum.frequencies(transaction)
       |> Map.new(fn {item, _} -> {[item], MapSet.new([index])} end)
       |> Map.merge(items, fn _k, v1, v2 -> MapSet.union(v1, v2) end)
+    end)
+    |> Enum.map(fn row ->
+      :ets.insert(table, row)
     end)
   end
 

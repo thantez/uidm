@@ -7,6 +7,7 @@ defmodule DataMiner.MixProject do
       version: "0.1.0",
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
+      escript: [main_module: DataMiner],
       deps: deps()
     ]
   end
@@ -21,7 +22,8 @@ defmodule DataMiner.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:flow, "~> 1.0"}
+      {:flow, "~> 1.0"},
+      {:logger_file_backend, "~> 0.0.11"}
     ]
   end
 end
