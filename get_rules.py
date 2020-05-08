@@ -42,14 +42,16 @@ def get_rules(transactions_count, frequent_itemsets, min_confidence):
                     transactions_count
                 confidence = itemset_support / element_support
                 if confidence >= min_confidence:
-                    rules.append((list(element), list(remain), confidence))
+                    remain_support = frequent_itemsets[remain] / transactions_count
+                    lift = confidence / remain_support
+                    rules.append((list(element), list(remain), confidence, lift))
     return rules
 
 
 def print_rules(rules):
     for rule in rules:
-        X, Y, confidence = rule
-        print(f'[{confidence:.2f}] {X} --> {Y}')
+        X, Y, confidence, lift = rule
+        print(f'[C: {confidence:.2f}, L: {lift:.2f}] {X} --> {Y}')
 
 
 def main():
