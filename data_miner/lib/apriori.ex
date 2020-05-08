@@ -1,24 +1,29 @@
 defmodule DataMiner.Apriori do
   @moduledoc """
-  Documentation for `Apriori`.
+  Documentation for `Apriori` Algorithm Implementation.
   """
-  require Logger
 
   @transactions_file Path.expand("../data/transactions_items.txt")
   @frequencies_file Path.expand("../data/items_frequencies.txt")
   @result_save_file Path.expand("../results/apriori_frequents.txt")
 
-  @min_supp 0.001
   @doc """
-  Main function for apriori algorithm.
+  Main function for run algorithm with minimum support.
+
+  This function will get minimum support as input.
+
+  This number is expressed as a percentage.
+
+  At the end of function result of `Apriori` algorithm will
+  save to a file.
   """
-  def main do
+  def main(min_supp) do
     transactions = import_transactions()
     frequencies = import_frequencies()
 
     start = Time.utc_now()
 
-    apriori(frequencies, [], transactions, @min_supp, length(transactions))
+    apriori(frequencies, [], transactions, min_supp, length(transactions))
     |> List.flatten()
     |> export_frequents()
 
@@ -26,6 +31,9 @@ defmodule DataMiner.Apriori do
     IO.inspect("total time: #{Time.diff(endt, start)}s")
   end
 
+  @doc """
+  Export frequents will export all frequent itemsets to a file.
+  """
   def export_frequents(frequents) do
     {:ok, file} = File.open(@result_save_file, [:write])
 
@@ -38,6 +46,13 @@ defmodule DataMiner.Apriori do
     end)
   end
 
+  @doc """
+  Implementation of eclat algorithm, this function will return any frequent itemset.
+
+  ## Examples
+
+
+  """
   def apriori([], frequents, _, _, _) do
     IO.inspect("ends")
     frequents
@@ -94,8 +109,6 @@ defmodule DataMiner.Apriori do
   def merge_itemsets([], merged_itemsets), do: merged_itemsets |> List.flatten()
 
   def merge_itemsets([{base_itemset, _} | tail], merged_list) do
-    Logger.debug("merge itemsets #{inspect(base_itemset)}")
-
     merged =
       tail
       |> Flow.from_enumerable()
@@ -122,8 +135,6 @@ defmodule DataMiner.Apriori do
   end
 
   def remove_low_frequencies(transactions_length, frequencies, min_supp) do
-    Logger.debug("remove low itemsets")
-
     frequencies
     |> Enum.filter(fn {_item, frequency} ->
       support(frequency, transactions_length) >= min_supp
@@ -138,7 +149,7 @@ defmodule DataMiner.Apriori do
     @frequencies_file
     |> import_file()
     |> Enum.reduce(%{}, fn [item, freq], acc ->
-      Map.put(acc, [String.to_atom(item)], String.to_integer(freq))
+      Map.put(acc, [item], String.to_integer(Atom.to_string(freq)))
     end)
   end
 

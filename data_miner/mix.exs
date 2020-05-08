@@ -8,7 +8,16 @@ defmodule DataMiner.MixProject do
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
       escript: [main_module: DataMiner],
-      deps: deps()
+      deps: deps(),
+
+      # Docs
+      name: "Data Miner",
+      source_url: "https://gitlab.com/thantez/uidm/-/tree/master/data_miner",
+      homepage_url: "https://gitlab.com/thantez/uidm",
+      docs: [
+        extras: ["README.md"]
+      ]
+
     ]
   end
 
@@ -23,7 +32,8 @@ defmodule DataMiner.MixProject do
   defp deps do
     [
       {:flow, "~> 1.0"},
-      {:logger_file_backend, "~> 0.0.11"}
+      {:logger_file_backend, "~> 0.0.11"},
+      {:ex_doc, "~> 0.21.3", only: :dev, runtime: false}
     ]
   end
 end
