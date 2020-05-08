@@ -51,6 +51,8 @@ defmodule DataMiner.Apriori do
 
   ## Examples
 
+      iex> DataMiner.Eclat.eclat([{[:a], MapSet.new([2])}, {[:b], MapSet.new([2])}], [], 0.1, 3)
+      [[{[:b, :a], #MapSet<[2]>}], [{[:a], #MapSet<[2]>}, {[:b], #MapSet<[2]>}]]
 
   """
   def apriori([], frequents, _, _, _) do
@@ -77,6 +79,15 @@ defmodule DataMiner.Apriori do
     )
   end
 
+  @doc """
+  This function will calculate frequency of any itemset by see itemset frequency inside transactions.
+
+  ## Examples
+
+      iex> DataMiner.Apriori.calculate_itemsets_frequency([["a", "b"], ["a", "c"]] |> Enum.map(&MapSet.new(&1)), [["a", "c", "d"], ["b", "c", "e"], ["a", "b", "c", "e"], ["b", "e"]] |> Enum.map(&MapSet.new(&1)))
+      [{["a", "b"], 1}, {["a", "c"], 2}]
+
+  """
   def calculate_itemsets_frequency(itemsets, transactions) do
     IO.inspect("calculating #{length(itemsets)}")
 
@@ -106,6 +117,11 @@ defmodule DataMiner.Apriori do
     result
   end
 
+  @doc """
+  This function will merge a list of itemsets to a list of sub itemsets.
+  So input is a list of itemsets and output is a list of merged itemsets.
+
+  """
   def merge_itemsets([], merged_itemsets), do: merged_itemsets |> List.flatten()
 
   def merge_itemsets([{base_itemset, _} | tail], merged_list) do
@@ -116,12 +132,22 @@ defmodule DataMiner.Apriori do
       |> Flow.map(fn {itemset, _} ->
         MapSet.new(merger(base_itemset, itemset))
       end)
+      |> Flow.partition()
       |> Flow.filter(fn itemset -> itemset != MapSet.new() end)
       |> Enum.to_list()
 
     merge_itemsets(tail, [merged | merged_list])
   end
 
+  @doc """
+  merger will merge two itemsets.
+
+   ## Examples
+
+      iex> DataMiner.Apriori.merger([1, 2, 3], [4, 2, 3])
+      [4, 1, 2, 3]
+
+  """
   def merger([base_item | tail_base_itemset], [item | tail_itemset]) do
     if tail_base_itemset == tail_itemset do
       [item | [base_item | tail_base_itemset]]
@@ -130,10 +156,13 @@ defmodule DataMiner.Apriori do
     end
   end
 
-  def transactions_length_calculation(transactions) do
-    length(transactions)
-  end
+  @doc """
+  When itemsets merged succesfully, we should pipe them into `remove_low_frequencies`
+  that will remove all of itemsets that size of their transactions are lower that minimum support.
 
+  This is for downward closers!
+
+  """
   def remove_low_frequencies(transactions_length, frequencies, min_supp) do
     frequencies
     |> Enum.filter(fn {_item, frequency} ->
@@ -141,10 +170,16 @@ defmodule DataMiner.Apriori do
     end)
   end
 
+  @doc """
+  support will calculate support of an itemset by its frequency
+  """
   def support(item_frequency, transactions_length) do
     item_frequency / transactions_length * 100
   end
 
+  @doc """
+  import frequencies file.
+  """
   def import_frequencies do
     @frequencies_file
     |> import_file()
@@ -153,12 +188,18 @@ defmodule DataMiner.Apriori do
     end)
   end
 
+  @doc """
+  import transactions file.
+  """
   def import_transactions do
     @transactions_file
     |> import_file()
     |> Enum.map(fn transaction -> MapSet.new(transaction) end)
   end
 
+  @doc """
+  import file.
+  """
   def import_file(file_address) do
     File.stream!(file_address)
     |> Stream.map(&String.trim/1)

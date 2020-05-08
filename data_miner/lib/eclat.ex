@@ -78,7 +78,7 @@ defmodule DataMiner.Eclat do
   This function will merge a list of itemsets to a list of sub itemsets.
   So input is a list of itemsets and output is a list of merged itemsets.
 
-  `note: Ccommented code is a parallel code for merging.`
+  `note: Commented codes are a parallel code for merging.`
 
   ## Examples
 
@@ -161,6 +161,9 @@ defmodule DataMiner.Eclat do
     |> IO.inspect()
   end
 
+  @doc """
+  support will calculate support of an itemset by its frequency
+  """
   def support(item_frequency, transactions_length) do
     item_frequency / transactions_length * 100
   end
